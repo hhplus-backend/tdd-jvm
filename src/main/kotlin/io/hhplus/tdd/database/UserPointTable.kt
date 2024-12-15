@@ -9,7 +9,7 @@ import java.util.*
  */
 @Component
 class UserPointTable {
-    private val table = mutableMapOf<Long, UserPoint>()
+    private val table = HashMap<Long, UserPoint>()
 
     fun selectById(id: Long): UserPoint {
         Thread.sleep(Math.random().toLong() * 200L)
