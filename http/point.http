@@ -8,15 +8,15 @@ GET {{host}}/point/{{pointId}}
 GET {{host}}/point/{{pointId}}/histories
 
 ### point 충전
-PATCH {{host}}/point/{{pointId}}//charge
+PATCH {{host}}/point/{{pointId}}/charge
 Content-Type: application/json
 
 {
-  "amount": 1000
+  "amount": 10000
 }
 
 ### point 사용
-PATCH {{host}}/point/{{pointId}}//use
+PATCH {{host}}/point/{{pointId}}/use
 Content-Type: application/json
 
 {
