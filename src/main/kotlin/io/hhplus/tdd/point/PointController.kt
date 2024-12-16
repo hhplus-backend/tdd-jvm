@@ -1,56 +1,40 @@
 package io.hhplus.tdd.point
 
+import io.hhplus.tdd.point.dto.PointChargeRequest
+import io.hhplus.tdd.point.dto.PointUseRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
-import java.util.Collections.emptyList
 
 @RestController
 @RequestMapping("/point")
-class PointController {
+class PointController(
+    private val pointService: PointService
+) {
+
     private val logger: Logger = LoggerFactory.getLogger(PointController::class.java)
 
-
-    /**
-     * TODO - 특정 유저의 포인트를 조회하는 기능을 작성해주세요.
-     */
     @GetMapping("{id}")
-    fun point(
-        @PathVariable id: Long,
-    ): UserPoint {
-        logger.info("111")
-        return UserPoint(0, 0, 0)
+    fun getUserPoint(@PathVariable id: Long): UserPoint {
+        logger.info("[GET] /point/$id - 유저 포인트 조회 요청")
+        return pointService.getUserPoint(id)
     }
 
-    /**
-     * TODO - 특정 유저의 포인트 충전/이용 내역을 조회하는 기능을 작성해주세요.
-     */
     @GetMapping("{id}/histories")
-    fun history(
-        @PathVariable id: Long,
-    ): List<PointHistory> {
-        return emptyList()
+    fun getPointHistories(@PathVariable id: Long): List<PointHistory> {
+        logger.info("[GET] /point/$id/histories - 유저 포인트 내역 조회 요청")
+        return pointService.getPointHistories(id)
     }
 
-    /**
-     * TODO - 특정 유저의 포인트를 충전하는 기능을 작성해주세요.
-     */
     @PatchMapping("{id}/charge")
-    fun charge(
-        @PathVariable id: Long,
-        @RequestBody amount: Long,
-    ): UserPoint {
-        return UserPoint(0, 0, 0)
+    fun chargePoint(@PathVariable id: Long, @RequestBody pointChargeRequest: PointChargeRequest): UserPoint {
+        logger.info("[PATCH] /point/$id/charge - 유저 포인트 충전 요청: $pointChargeRequest.amount")
+        return pointService.chargePoint(id, pointChargeRequest.amount)
     }
 
-    /**
-     * TODO - 특정 유저의 포인트를 사용하는 기능을 작성해주세요.
-     */
     @PatchMapping("{id}/use")
-    fun use(
-        @PathVariable id: Long,
-        @RequestBody amount: Long,
-    ): UserPoint {
-        return UserPoint(0, 0, 0)
+    fun usePoint(@PathVariable id: Long, @RequestBody pointUseRequest: PointUseRequest): UserPoint {
+        logger.info("[PATCH] /point/$id/use - 유저 포인트 사용 요청: $pointUseRequest.amount")
+        return pointService.usePoint(id, pointUseRequest.amount)
     }
 }
