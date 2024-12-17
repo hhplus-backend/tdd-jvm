@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define valid prefixes
-VALID_PREFIXES="^(feat|fix|build|design|refactor|docs|chore):"
+VALID_PREFIXES="^(feat|fix|test|build|design|refactor|docs|chore):"
 
 # Get the commit message file
 COMMIT_MSG_FILE="$1"
@@ -19,6 +19,7 @@ if ! echo "$COMMIT_MSG" | grep -qiE "$VALID_PREFIXES"; then
   echo "Error: 커밋 컨벤션을 맞춰주세요!!"
   echo " feat: ~~~ 기능 추가"
   echo "  fix: ~~~ 오류 수정"
+  echo "  test: ~~~ 테스트 추가"
   echo "  build: ~~~ 빌드 관련 수정"
   echo "  design: ~~~ CSS 등 사용자 UI 디자인 변경"
   echo "  refactor: ~~ 기능 리팩토링"
