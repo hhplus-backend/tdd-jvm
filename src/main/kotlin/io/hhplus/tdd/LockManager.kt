@@ -17,9 +17,9 @@ class LockManager {
      * ...
     }
      */
-    fun <T> withLock(key: String, action: () -> T): T {
+    fun <T> lock(key: String, timeout: Long, unit: TimeUnit, action: () -> T): T {
         val lock = locks.computeIfAbsent(key) { ReentrantLock() }
-        lock.lock()
+        lock.tryLock(timeout, unit)
         try {
             return action()
         } finally {
@@ -32,19 +32,19 @@ class LockManager {
      * time 시간 동안 락 획득을 시도하며, 주어진 시간 내에 성공적으로 락을 획득하면
      * true, 시간이 초과되면 false를 return
      */
-    fun lock(key: String, time: Long, unit: TimeUnit): Boolean {
+    fun lock(key: String, timeout: Long, unit: TimeUnit): Boolean {
         val lock = locks.computeIfAbsent(key) { ReentrantLock() }
-        return lock.tryLock(time, unit)
+        return lock.tryLock(timeout, unit)
     }
 
     /**
      * 명시적으로 락을 획득합니다.
      * leasetime 후에 자동으로 락을 해제합니다.
      */
-    fun lockWithLeaseTime(key: String, leaseTime: Long, unit: TimeUnit): Boolean {
+    fun lockWithLeaseTime(key: String, timeout: Long, leaseTime: Long, unit: TimeUnit): Boolean {
         val lock = locks.computeIfAbsent(key) { ReentrantLock() }
 
-        val lockAcquired = lock.tryLock()
+        val lockAcquired = lock.tryLock(timeout, unit)
         if (lockAcquired) {
             // leaseTime 후 락을 해제
             Executors.newSingleThreadScheduledExecutor().schedule({
