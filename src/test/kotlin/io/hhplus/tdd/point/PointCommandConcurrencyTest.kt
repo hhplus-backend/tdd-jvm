@@ -4,6 +4,7 @@ import io.hhplus.tdd.database.PointHistoryTable
 import io.hhplus.tdd.database.UserPointTable
 import io.hhplus.tdd.point.UserPoint.Companion.MAX_BALANCE
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -43,6 +44,9 @@ class PointCommandConcurrencyTest {
 
         val userPoint4 = UserPoint(id = 4L, point = 0L, updateMillis = System.currentTimeMillis())
         userPointTable.insertOrUpdate(4L, userPoint4.point)
+
+        val userPoint5 = UserPoint(id = 5L, point = 1000L, updateMillis = System.currentTimeMillis())
+        userPointTable.insertOrUpdate(5L, userPoint5.point)
     }
 
     @Test
@@ -230,4 +234,58 @@ class PointCommandConcurrencyTest {
         assertThat(user2Point.point).isEqualTo(10500L)
     }
 
+    @Test
+    @DisplayName("충전 및 사용 작업이 동시 실행될 때 결과 검증. 충전 및 사용을 서로 다른 스레드에서 동시에 실행하고, 작업 완료 후 결과 상태를 검증")
+    fun `test concurrent charge and usage at the same time`() {
+//        충전 먼저 성공:
+//        •	충전: 성공 → 잔고 2000원.
+//        •	사용: 성공 → 잔고 0원.
+//        •	사용 먼저 실행:
+//        •	사용: 실패 → 잔고 부족.
+//        •	충전: 성공 → 잔고 2000원.
+        // given
+        val executor = Executors.newFixedThreadPool(2)
+        val userId = 5L
+
+        // when
+        // 충전 작업 (1000원 충전)
+        val chargeTask = executor.submit<Boolean> {
+            try {
+                pointCommand.chargePoint(userId, 1000L)
+                true
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        // 사용 작업 (2000원 사용)
+        val useTask = executor.submit<Boolean> {
+            try {
+                pointCommand.usePoint(userId, 2000L)
+                true
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        // 작업 완료 대기
+        val chargeResult = chargeTask.get(2, TimeUnit.SECONDS)
+        val useResult = useTask.get(2, TimeUnit.SECONDS)
+
+        // then
+        val finalUserPoint = userPointTable.selectById(userId)
+
+        if (!useResult) {
+            // 2000원 사용 실패 -> 잔고 부족, 충전은 성공했을 것
+            assertThat(finalUserPoint.point).isEqualTo(2000L)
+        } else if (chargeResult) {
+            // 충전 먼저 성공 -> 충전과 사용 모두 성공
+            assertThat(finalUserPoint.point).isEqualTo(0L)
+        } else {
+            fail("예상하지 못한 상태입니다.")
+        }
+
+        executor.shutdown()
+        executor.awaitTermination(2, TimeUnit.SECONDS)
+    }
 }
