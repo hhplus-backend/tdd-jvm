@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -43,13 +44,6 @@ class PointCommandConcurrencyTest {
         val userPoint4 = UserPoint(id = 4L, point = 0L, updateMillis = System.currentTimeMillis())
         userPointTable.insertOrUpdate(4L, userPoint4.point)
     }
-
-//    @AfterEach
-//    fun tearDown() {
-//        userPointTable.insertOrUpdate(1L, 0L)
-//        userPointTable.insertOrUpdate(2L, 0L)
-//
-//    }
 
     @Test
     @DisplayName("포인트 충전 동시성 테스트")
@@ -118,6 +112,7 @@ class PointCommandConcurrencyTest {
         assertThat(finalUserPoint.point).isEqualTo(expectedPoint)
         assertThat(histories).hasSize(threadCount)
     }
+
     @Test
     @DisplayName("포인트 사용을 100건만 처리 할 수 있을 때, 포인트 사용 요청이 101건 들어오면 마지막 요청은 실패한다.")
     fun `test usePoint with 101 concurrent requests but insufficient points`() {
@@ -198,4 +193,41 @@ class PointCommandConcurrencyTest {
         assertThat(failureCount.get()).isEqualTo(1)  // 1개의 요청은 실패
         assertThat(histories).hasSize(100) // 기록도 100개만 남아야 함
     }
+
+    @Test
+    @DisplayName("포인트 충전과 사용 복합적인 테스트")
+    fun `test concurrent charge and usage`() {
+        // given
+        val executor = Executors.newFixedThreadPool(4)
+
+        val tasks = listOf(
+            { pointCommand.chargePoint(1L, 5000L) },
+            { pointCommand.usePoint(1L, 3000L) },
+            { pointCommand.chargePoint(2L, 2000L) },
+            { pointCommand.usePoint(2L, 1500L) }
+        )
+
+        // when
+        val futures = tasks.map { task -> // task가 순서대로 실행되는 것은 아님.
+            executor.submit {
+                try {
+                    task()
+                } catch (e: Exception) {
+                    println(e.message)
+                }
+            }
+        }
+
+        futures.forEach { it.get() }
+
+        executor.shutdown()
+        executor.awaitTermination(5, TimeUnit.SECONDS)
+
+        // then
+        val user1Point = userPointTable.selectById(1L)
+        assertThat(user1Point.point).isEqualTo(12000L)
+        val user2Point = userPointTable.selectById(2L)
+        assertThat(user2Point.point).isEqualTo(10500L)
+    }
+
 }
